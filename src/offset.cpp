@@ -11,6 +11,13 @@
 
 using namespace mavsdk;
 
+// TODO: Replace with actual YOLOv8 detection logic
+
+PersonBoundingBox get_person_detection() {
+    // Simulate a person detection
+    return {200, 150, 280, 300, 0.85f};
+}
+
 // Helper function implementations
 int get_person_center_x(const PersonBoundingBox& person) {
     return (person.x_min + person.x_max) / 2;
@@ -216,72 +223,58 @@ int main() {
     }
     
     // TODO: Replace with actual YOLO detection pipeline
-    std::vector<PersonBoundingBox> detected_persons = {
-        {200, 150, 280, 300, 0.85f},  // Person slightly left and up
-        {310, 230, 370, 350, 0.92f},  // Person slightly right and down
-        {315, 235, 325, 245, 0.78f}   // Person centered (small bounding box for testing)
-    };
-    
-    int detection_index = 0;
+    PersonBoundingBox person = get_person_detection();
+
     bool person_centered = false;
-    
-    std::cout << "\nStarting person centering process..." << std::endl;
-    
-    while (!person_centered && detection_index < detected_persons.size()) {
-        // Get current person detection
-        PersonBoundingBox current_person = detected_persons[detection_index];
-        
-        std::cout << "\n--- Detection " << (detection_index + 1) << " ---" << std::endl;
-        std::cout << "Person bounding box: [" << current_person.x_min << ", " 
-                  << current_person.y_min << ", " << current_person.x_max 
-                  << ", " << current_person.y_max << "]" << std::endl;
-        
+
+    while (!person_centered) {
         // Calculate offset from frame center
-        Offset offset = calculate_offset(current_person);
-        
+        Offset offset = calculate_offset(person);
+
         std::cout << "Offset from center: X=" << offset.x << ", Y=" << offset.y << std::endl;
         std::cout << "Person centered: " << (offset.is_centered ? "YES" : "NO") << std::endl;
-        
+
         if (offset.is_centered) {
             // Person is centered, capture GPS coordinates
             std::cout << "\n🎯 Person is centered! Capturing GPS coordinates..." << std::endl;
-            
+
             GPSCoordinates coords = drone.get_current_gps();
             std::cout << std::fixed << std::setprecision(8)
                       << "GPS Coordinates captured:" << std::endl
                       << "  Latitude: " << coords.latitude << "°" << std::endl
                       << "  Longitude: " << coords.longitude << "°" << std::endl
                       << "  Altitude: " << coords.altitude << " m" << std::endl;
-            
+
             // Store coordinates locally
             if (store_coordinates_locally(coords)) {
                 std::cout << "✅ Coordinates stored locally." << std::endl;
             }
-            
+
             // TODO: Implement transmission to base station
             std::cout << "🚀 Ready to transmit to base station (implementation needed)." << std::endl;
-            
+
             person_centered = true;
         } else {
             // Calculate and send velocity command to center the drone
             VelocityCommand vel_cmd = calculate_velocity_command(offset);
-            
+
             std::cout << "Sending velocity command:" << std::endl
                       << "  North: " << vel_cmd.north_m_s << " m/s" << std::endl
                       << "  East: " << vel_cmd.east_m_s << " m/s" << std::endl
                       << "  Down: " << vel_cmd.down_m_s << " m/s" << std::endl;
-            
+
             if (drone.send_velocity_command(vel_cmd)) {
                 std::cout << "✅ Velocity command sent successfully." << std::endl;
             } else {
                 std::cerr << "❌ Failed to send velocity command." << std::endl;
             }
-            
+
             // Wait for drone to move (in real implementation, this would be based on actual movement)
             std::this_thread::sleep_for(std::chrono::seconds(2));
+
+            // Get the next simulated detection
+            person = get_person_detection();
         }
-        
-        detection_index++;
     }
     
     // Stop offboard mode
