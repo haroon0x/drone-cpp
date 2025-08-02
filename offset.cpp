@@ -31,7 +31,7 @@ Offset calculate_offset(const PersonBoundingBox& person) {
     offset.x = person_center_x - frame_center_x;
     offset.y = person_center_y - frame_center_y;
     
-    // Check if person is centered within threshold
+  
     offset.is_centered = (std::abs(offset.x) <= CENTERING_THRESHOLD_X && 
                          std::abs(offset.y) <= CENTERING_THRESHOLD_Y);
     
@@ -42,7 +42,7 @@ VelocityCommand calculate_velocity_command(const Offset& offset) {
     VelocityCommand cmd;
     
     if (offset.is_centered) {
-        // Person is centered, stop movement
+        
         cmd.north_m_s = 0.0f;
         cmd.east_m_s = 0.0f;
         cmd.down_m_s = 0.0f;
@@ -89,7 +89,7 @@ bool store_coordinates_locally(const GPSCoordinates& coords) {
 
 class DroneController {
 private:
-    std::shared_ptr<System> system;
+    std::shared_ptr<s> system;
     std::shared_ptr<Telemetry> telemetry;
     std::shared_ptr<Offboard> offboard;
     bool is_connected;
@@ -107,7 +107,7 @@ public:
         }
         
         std::cout << "Waiting to discover system..." << std::endl;
-        auto prom = std::promise<std::shared_ptr<System>>{};
+        auto prom = std::promise<std::shared_ptr<s>>{};
         auto fut = prom.get_future();
         
         Mavsdk::NewSystemHandle handle = mavsdk.subscribe_on_new_system([&mavsdk, &prom, &handle]() {
@@ -177,7 +177,7 @@ public:
     bool start_offboard_mode() {
         if (!is_connected) return false;
         
-        // Start with zero velocity
+       
         VelocityCommand zero_cmd = {0.0f, 0.0f, 0.0f};
         send_velocity_command(zero_cmd);
         
@@ -215,7 +215,7 @@ int main() {
         return -1;
     }
     
-    // Simulation: Person detection results (in real implementation, this would come from YOLO)
+    // TODO: Replace with actual YOLO detection pipeline
     std::vector<PersonBoundingBox> detected_persons = {
         {200, 150, 280, 300, 0.85f},  // Person slightly left and up
         {310, 230, 370, 350, 0.92f},  // Person slightly right and down
