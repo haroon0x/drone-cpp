@@ -13,32 +13,27 @@ find_package(MAVSDK REQUIRED)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Add executables
-add_executable(drone_client src/offset.cpp src/communication.cpp)
+add_executable(drone_client src/drone_client.cpp src/communication.cpp src/storage.cpp)
 target_link_libraries(drone_client PRIVATE MAVSDK::mavsdk)
-
-add_executable(base_station_server base_station_server.cpp)
 
 # Platform-specific libraries for networking
 if(WIN32)
     target_link_libraries(drone_client PRIVATE ws2_32)
-    target_link_libraries(base_station_server PRIVATE ws2_32)
 endif()
 
 # Add common compiler flags and definitions
-foreach(target drone_client base_station_server)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        target_compile_options(${target} PRIVATE /W4)
-    endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(drone_client PRIVATE -Wall -Wextra -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(drone_client PRIVATE /W4)
+endif()
 
-    target_compile_definitions(${target} PRIVATE
-        $<$<CONFIG:Debug>:DEBUG_BUILD>
-    )
-endforeach()
+target_compile_definitions(drone_client PRIVATE
+    $<$<CONFIG:Debug>:DEBUG_BUILD>
+)
 
 # Installation (optional)
-install(TARGETS drone_client base_station_server
+install(TARGETS drone_client
     RUNTIME DESTINATION bin
 )
 
