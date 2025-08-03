@@ -250,8 +250,12 @@ int main() {
                 std::cout << "✅ Coordinates stored locally." << std::endl;
             }
 
-            // TODO: Implement transmission to base station
-            std::cout << "🚀 Ready to transmit to base station (implementation needed)." << std::endl;
+            // Transmit coordinates to base station
+            if (transmit_coordinates_to_base(coords)) {
+                std::cout << "✅ Coordinates transmitted to base station." << std::endl;
+            } else {
+                std::cerr << "❌ Failed to transmit coordinates to base station." << std::endl;
+            }
 
             person_centered = true;
         } else {

@@ -10,23 +10,22 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_package(MAVSDK REQUIRED)
 
 # Include directories
-# NOTE: The directory is named 'inlcude' not 'include'
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inlcude)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Add executables
-add_executable(drone_functions src/offset.cpp)
-target_link_libraries(drone_functions PRIVATE MAVSDK::mavsdk)
+add_executable(drone_client src/offset.cpp src/communication.cpp)
+target_link_libraries(drone_client PRIVATE MAVSDK::mavsdk)
 
-add_executable(transmit_location src/transmit.cpp)
-target_link_libraries(transmit_location PRIVATE MAVSDK::mavsdk)
+add_executable(base_station_server base_station_server.cpp)
 
 # Platform-specific libraries for networking
 if(WIN32)
-    target_link_libraries(transmit_location PRIVATE ws2_32)
+    target_link_libraries(drone_client PRIVATE ws2_32)
+    target_link_libraries(base_station_server PRIVATE ws2_32)
 endif()
 
 # Add common compiler flags and definitions
-foreach(target drone_functions transmit_location)
+foreach(target drone_client base_station_server)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -39,7 +38,7 @@ foreach(target drone_functions transmit_location)
 endforeach()
 
 # Installation (optional)
-install(TARGETS drone_functions transmit_location
+install(TARGETS drone_client base_station_server
     RUNTIME DESTINATION bin
 )
 
