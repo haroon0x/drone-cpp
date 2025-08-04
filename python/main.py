@@ -1,8 +1,8 @@
 import time
 import csv
 import os
-from src.drone_controller import DroneController, GPSCoordinates
-from src.offset import get_person_detection, calculate_offset, calculate_velocity_command, VelocityCommand
+from src.drone_controller import DroneController, GPSCoordinates, VelocityCommand
+from src.offset import get_person_detection, calculate_offset, calculate_velocity_command
 from src.communication import BaseStationCommunicator
 
 def format_gps(coord):
@@ -23,6 +23,7 @@ def store_coordinates_locally(coords: GPSCoordinates):
             "longitude": format_gps(coords.longitude_deg),
             "altitude_m": f"{coords.relative_altitude_m:.3f}"
         })
+    print("Coordinates stored locally.")
     return True
 
 def transmit_coordinates_to_base(coords: GPSCoordinates):
@@ -30,53 +31,48 @@ def transmit_coordinates_to_base(coords: GPSCoordinates):
     return communicator.transmit_coordinates(coords)
 
 def main():
-    print("Starting Person-Centered GPS Tracking System (pymavlink).")
+    print("Starting Person-Centered GPS Tracking System (pymavlink)...")
 
     drone = DroneController()
     if not drone.connect():
-        print("Failed to connect to drone. Exiting.")
         return
 
     if not drone.start_offboard_mode():
-        print("Failed to start offboard mode. Exiting.")
         return
 
     person = get_person_detection()
     person_centered = False
     
     start_time = time.time()
-    timeout = 15 
+    timeout = 20
     cycle_start_time = time.time()
 
+    print("\nStarting centering loop...")
     while not person_centered and (time.time() - start_time) < timeout:
         offset = calculate_offset(person)
         
         if offset.is_centered:
-            print("\nPerson is centered! Capturing GPS coordinates...")
-            
-            stop_cmd = VelocityCommand(0.0, 0.0, 0.0)
-            drone.send_velocity_command(stop_cmd)
-            time.sleep(0.2) 
+            print("Person is centered. Halting movement.")
+            drone.send_velocity_command(VelocityCommand(0.0, 0.0, 0.0))
+            time.sleep(0.5)
 
+            print("Capturing GPS coordinates...")
             coords = drone.get_current_gps()
+            
             if coords:
                 cycle_time = time.time() - cycle_start_time
                 print(f"Cycle time (detect to capture): {cycle_time:.2f}s")
-
                 print(f"GPS Captured: Lat: {format_gps(coords.latitude_deg)}, Lon: {format_gps(coords.longitude_deg)}")
-
-                if store_coordinates_locally(coords):
-                    print("Coordinates stored locally.")
-
+                
+                store_coordinates_locally(coords)
                 transmit_coordinates_to_base(coords)
             else:
-                print("Could not retrieve GPS coordinates.")
+                print("Failed to retrieve GPS coordinates.")
             
             person_centered = True
         else:
             vel_cmd = calculate_velocity_command(offset)
             drone.send_velocity_command(vel_cmd)
-            
             time.sleep(0.1)
             person = get_person_detection()
 
