@@ -13,7 +13,7 @@
     #include <ws2tcpip.h>
     #pragma comment(lib, "ws2_32.lib")
 #else
-    #include <sys/socket.hh>
+    #include <sys/socket.h>
     #include <arpa/inet.h>
     #include <unistd.h>
     #define SOCKET int

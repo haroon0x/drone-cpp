@@ -2,12 +2,6 @@
 
 #include <string>
 
-Offset calculate_offset(const PersonBoundingBox& person);
-VelocityCommand calculate_velocity_command(const Offset& offset);
-bool store_coordinates_locally(const GPSCoordinates& coords);
-bool transmit_coordinates_to_base(const GPSCoordinates& coords);
-int get_person_center_x(const PersonBoundingBox& person);
-int get_person_center_y(const PersonBoundingBox& person);
 
 // Frame configuration
 constexpr int FRAME_WIDTH = 640;
@@ -50,3 +44,11 @@ struct VelocityCommand {
     float down_m_s;  // Should remain 0 for horizontal-only movement
 };
 
+
+
+Offset calculate_offset(const PersonBoundingBox& person);
+VelocityCommand calculate_velocity_command(const Offset& offset);
+bool store_coordinates_locally(const GPSCoordinates& coords);
+bool transmit_coordinates_to_base(const GPSCoordinates& coords);
+int get_person_center_x(const PersonBoundingBox& person);
+int get_person_center_y(const PersonBoundingBox& person);

@@ -1,0 +1,47 @@
+
+import socket
+import json
+import time
+
+BASE_STATION_IP = "127.0.0.1"
+BASE_STATION_PORT = 8080
+MAX_RETRY_ATTEMPTS = 3
+RETRY_DELAY_MS = 1000
+
+class BaseStationCommunicator:
+    def __init__(self, ip=BASE_STATION_IP, port=BASE_STATION_PORT):
+        self.server_ip = ip
+        self.server_port = port
+
+    def create_gps_message(self, coords):
+        message = {
+            "message_type": "gps_coordinates",
+            "timestamp": int(time.time() * 1000),
+            "latitude": coords.latitude_deg,
+            "longitude": coords.longitude_deg,
+            "altitude": coords.relative_altitude_m
+        }
+        return json.dumps(message)
+
+    def transmit_coordinates(self, coords):
+        message = self.create_gps_message(coords)
+        base_delay = 0.5  # 500ms initial delay
+        for attempt in range(MAX_RETRY_ATTEMPTS):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(2.0)  # 2-second timeout for connection
+                    sock.connect((self.server_ip, self.server_port))
+                    sock.sendall(message.encode('utf-8'))
+                    print("Successfully transmitted coordinates.")
+                    return True
+            except ConnectionRefusedError:
+                delay = base_delay * (2 ** attempt)
+                print(f"Connection refused. Retrying in {delay:.1f}s...")
+                time.sleep(delay)
+            except Exception as e:
+                print(f"An error occurred during transmission: {e}")
+                delay = base_delay * (2 ** attempt)
+                time.sleep(delay)
+        
+        print("Failed to transmit coordinates after all attempts.")
+        return False

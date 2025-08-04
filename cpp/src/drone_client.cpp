@@ -8,6 +8,8 @@
 #include <thread>
 #include <cmath>
 #include <iomanip>
+#include <future>  
+#include <mavsdk/system.h> 
 
 using namespace mavsdk;
 
@@ -18,7 +20,7 @@ PersonBoundingBox get_person_detection() {
     return {200, 150, 280, 300, 0.85f};
 }
 
-// Helper function implementations
+
 int get_person_center_x(const PersonBoundingBox& person) {
     return (person.x_min + person.x_max) / 2;
 }
@@ -79,7 +81,7 @@ VelocityCommand calculate_velocity_command(const Offset& offset) {
 
 class DroneController {
 private:
-    std::shared_ptr<s> system;
+    std::shared_ptr<mavsdk::System> system;
     std::shared_ptr<Telemetry> telemetry;
     std::shared_ptr<Offboard> offboard;
     bool is_connected;
@@ -87,40 +89,44 @@ private:
 public:
     DroneController() : is_connected(false) {}
     
-    bool connect(const std::string& connection_url = "udp://:14540") {
-        Mavsdk mavsdk{Mavsdk::Configuration{Mavsdk::ComponentType::GroundStation}};
-        
-        ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
-        if (connection_result != ConnectionResult::Success) {
-            std::cerr << "Connection failed: " << connection_result << std::endl;
-            return false;
-        }
-        
-        std::cout << "Waiting to discover system..." << std::endl;
-        auto prom = std::promise<std::shared_ptr<s>>{};
-        auto fut = prom.get_future();
-        
-        Mavsdk::NewSystemHandle handle = mavsdk.subscribe_on_new_system([&mavsdk, &prom, &handle]() {
-            auto system = mavsdk.systems().back();
-            if (system->has_autopilot()) {
-                mavsdk.unsubscribe_on_new_system(handle);
-                prom.set_value(system);
-            }
-        });
-        
-        if (fut.wait_for(std::chrono::seconds(3)) == std::future_status::timeout) {
-            std::cerr << "No autopilot found." << std::endl;
-            return false;
-        }
-        
-        system = fut.get();
-        telemetry = std::make_shared<Telemetry>(system);
-        offboard = std::make_shared<Offboard>(system);
-        
-        is_connected = true;
-        std::cout << "Connected to drone successfully." << std::endl;
-        return true;
+bool connect(const std::string& connection_url = "udp://:14540") {
+    mavsdk::Mavsdk::Configuration config(1, 1, false);
+    mavsdk::Mavsdk mavsdk(config);
+
+    ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
+    if (connection_result != ConnectionResult::Success) {
+        std::cerr << "Connection failed: " << connection_result << std::endl;
+        return false;
     }
+
+    std::cout << "Waiting to discover system..." << std::endl;
+
+    auto prom = std::promise<std::shared_ptr<mavsdk::System>>{};
+    auto fut = prom.get_future();
+
+    // Declare handle separately to use it inside the lambda
+    Mavsdk::NewSystemHandle handle;
+    handle = mavsdk.subscribe_on_new_system([&mavsdk, &prom, &handle]() {
+        auto sys = mavsdk.systems().back();
+        if (sys->has_autopilot()) {
+            mavsdk.unsubscribe_on_new_system(handle);
+            prom.set_value(sys);
+        }
+    });
+
+    if (fut.wait_for(std::chrono::seconds(3)) == std::future_status::timeout) {
+        std::cerr << "No autopilot found." << std::endl;
+        return false;
+    }
+
+    system = fut.get();
+    telemetry = std::make_shared<Telemetry>(system);
+    offboard = std::make_shared<Offboard>(system);
+
+    is_connected = true;
+    std::cout << "Connected to drone successfully." << std::endl;
+    return true;
+}
     
     GPSCoordinates get_current_gps() {
         GPSCoordinates coords = {0, 0, 0, 0};
