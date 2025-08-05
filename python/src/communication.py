@@ -45,3 +45,42 @@ class BaseStationCommunicator:
         
         print("Failed to transmit coordinates after all attempts.")
         return False
+
+    def transmit_payload_dropped_status(self, dropped: bool):
+        message = {
+            "message_type": "payload_status",
+            "timestamp": int(time.time() * 1000),
+            "dropped": dropped
+        }
+        message = json.dumps(message)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((self.server_ip, self.server_port))
+                sock.sendall(message.encode('utf-8'))
+                print("Successfully transmitted payload status.")
+                return True
+        except Exception as e:
+            print(f"Failed to transmit payload status: {e}")
+            return False
+
+    def receive_coordinates(self):
+        print("Waiting to receive coordinates...")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind((self.server_ip, self.server_port))
+            sock.listen()
+            conn, addr = sock.accept()
+            with conn:
+                print(f"Connected by {addr}")
+                data = conn.recv(1024)
+                if not data:
+                    return None
+                message = json.loads(data.decode('utf-8'))
+                if message.get("message_type") == "gps_coordinates":
+                    from src.drone_controller import GPSCoordinates
+                    return GPSCoordinates(
+                        latitude_deg=message["latitude"],
+                        longitude_deg=message["longitude"],
+                        absolute_altitude_m=message["altitude"],
+                        relative_altitude_m=message["altitude"]
+                    )
+                return None
