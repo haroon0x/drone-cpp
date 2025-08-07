@@ -11,6 +11,7 @@ def main():
     print("Scout drone initiated.")
 
     drone = DroneController()
+    
     if not drone.connect():
         return
 

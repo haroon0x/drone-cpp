@@ -12,23 +12,24 @@ def scan_for_person(frame):
 
     Returns:
         tuple: A tuple containing:
-            - bool: True if a person is detected, False otherwise.
+            - list: A list of bounding boxes for detected persons. Each bounding box is a
+              tuple of (x_min, y_min, x_max, y_max, confidence).
             - numpy.ndarray: The frame with detections annotated.
     """
     results = model(frame)
-    person_detected = False
+    persons = []
     annotated_frame = results[0].plot()
 
     # Iterate through detection results to find 'person' (class ID 0 in COCO dataset)
     for r in results:
-        for c in r.boxes.cls:
+        for i, c in enumerate(r.boxes.cls):
             if model.names[int(c)] == 'person':
-                person_detected = True
-                break
-        if person_detected:
-            break
-            
-    return person_detected, annotated_frame
+                # Get the bounding box coordinates and confidence
+                bbox = r.boxes.xyxy[i].cpu().numpy()
+                confidence = r.boxes.conf[i].cpu().numpy()
+                persons.append((bbox[0], bbox[1], bbox[2], bbox[3], float(confidence)))
+
+    return persons, annotated_frame
 
 
 if __name__ == "__main__":
@@ -45,10 +46,12 @@ if __name__ == "__main__":
             print("Error: Could not read frame from video stream.")
             break
 
-        person_found, annotated_frame = scan_for_person(frame)
+        persons, annotated_frame = scan_for_person(frame)
 
-        if person_found:
-            print("Person detected!")
+        if persons:
+            print(f"Detected {len(persons)} person(s).")
+            for person in persons:
+                print(f"  - BBox: {person}")
         else:
             print("No person detected.")
 

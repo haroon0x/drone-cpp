@@ -15,3 +15,21 @@ ENABLE_VIDEO_DISPLAY = False
 PAYLOAD_SERVO_CHANNEL = 8  # Example: Servo connected to output channel 8
 PAYLOAD_SERVO_OPEN_PWM = 1900 # PWM value for open/release
 PAYLOAD_SERVO_CLOSED_PWM = 1100 # PWM value for closed/hold
+
+# Person detection and centering settings
+CENTERING_TIMEOUT = 30  # seconds
+
+# Frame dimensions for person detection
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
+
+# Centering thresholds in pixels
+CENTERING_THRESHOLD_X = 10
+CENTERING_THRESHOLD_Y = 10
+
+# Velocity control for centering
+MAX_VELOCITY = 2.0  # m/s
+VELOCITY_SCALING_FACTOR = 0.01
+
+# GPS navigation settings                               │
+GPS_REACHED_TOLERANCE_M = 2.0 
