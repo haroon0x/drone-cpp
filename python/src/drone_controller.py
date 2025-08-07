@@ -1,18 +1,14 @@
 
 from pymavlink import mavutil
 import time
+import math
 from src import config
 from src.communication import BaseStationCommunicator
 from src.detection import scan_for_person
 from src.offset import PersonBoundingBox, calculate_offset, calculate_velocity_command
 import cv2
 
-class GPSCoordinates:
-    def __init__(self, latitude_deg, longitude_deg, absolute_altitude_m, relative_altitude_m):
-        self.latitude_deg = latitude_deg
-        self.longitude_deg = longitude_deg
-        self.absolute_altitude_m = absolute_altitude_m
-        self.relative_altitude_m = relative_altitude_m
+from src.shared import GPSCoordinates
 
 class VelocityCommand:
     def __init__(self, north_m_s, east_m_s, down_m_s):
@@ -112,6 +108,30 @@ class DroneController:
         print(f"Mode set to {mode}.")
         return True
 
+    def takeoff(self, altitude_m):
+        if not self.is_connected:
+            raise ConnectionError("Not connected to drone.")
+
+        print(f"Taking off to {altitude_m}m...")
+        self.master.mav.command_long_send(
+            self.master.target_system, self.master.target_component,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, altitude_m)
+
+        if not self._wait_for_ack(mavutil.mavlink.MAV_CMD_NAV_TAKEOFF):
+            print("Failed to acknowledge takeoff command.")
+            return False
+
+        # Wait for the drone to reach the target altitude
+        while True:
+            msg = self.master.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+            if msg:
+                relative_alt = msg.relative_alt / 1000.0
+                print(f"Current altitude: {relative_alt:.2f}m")
+                if relative_alt >= altitude_m * 0.95:
+                    print("Reached target altitude.")
+                    return True
+            time.sleep(1)
+
     def release_payload(self):
         if not self.is_connected:
             raise ConnectionError("Not connected to drone.")
@@ -209,7 +229,7 @@ class DroneController:
         print("RTL command sent. Drone should be returning to home.")
         return True
 
-    def delivery_sequence(self):
+    def center_on_person_and_drop_payload(self):
         cap = cv2.VideoCapture(0)
 
         if not cap.isOpened():
@@ -236,8 +256,7 @@ class DroneController:
                     print("Person centered. Releasing payload.")
                     self.release_payload()
                     time.sleep(2) # Wait for payload to drop
-                    print("Payload released. Landing.")
-                    self.land()
+                    print("Payload released. Mission for this location is complete.")
                     break
                 else:
                     velocity_cmd = calculate_velocity_command(offset)

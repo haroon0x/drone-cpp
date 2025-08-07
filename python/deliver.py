@@ -1,5 +1,5 @@
 import time
-from src.drone_controller import DroneController, GPSCoordinates
+from src.drone_controller import DroneController
 from src.communication import BaseStationCommunicator
 from src import config
 
@@ -23,33 +23,32 @@ def main():
         print("Failed to set offboard mode. Exiting.")
         return
 
-    # Define multiple delivery locations
-    # These would typically come from a mission plan or base station
-    delivery_locations = [
-        GPSCoordinates(latitude_deg=35.6895, longitude_deg=139.6917, absolute_altitude_m=config.DEFAULT_TAKEOFF_ALTITUDE_DELIVER, relative_altitude_m=config.DEFAULT_TAKEOFF_ALTITUDE_DELIVER),
-        GPSCoordinates(latitude_deg=35.6890, longitude_deg=139.6920, absolute_altitude_m=config.DEFAULT_TAKEOFF_ALTITUDE_DELIVER, relative_altitude_m=config.DEFAULT_TAKEOFF_ALTITUDE_DELIVER),
-        # Add more locations as needed
-    ]
+    # Main mission loop
+    while True:
+        print("\nWaiting for next delivery location from base station...")
+        target_gps = communicator.receive_coordinates()
 
-    # 1. Take off (if not already airborne)
-    # Assuming drone is already at a safe altitude or will take off to DEFAULT_TAKEOFF_ALTITUDE_DELIVER
-    # if not drone.takeoff(config.DEFAULT_TAKEOFF_ALTITUDE_DELIVER):
-    #     print("Takeoff failed. Exiting.")
-    #     return
+        if not target_gps:
+            print("No coordinates received or an error occurred. Mission complete or standing by.")
+            break
 
+        print(f"Received new target: Lat: {target_gps.latitude_deg}, Lon: {target_gps.longitude_deg}")
 
-    # 2. Execute the multi-location delivery sequence
-    drone.delivery_sequence(delivery_locations)
+        # 1. Navigate to the target GPS coordinates
+        if not drone.goto_gps_coordinates(target_gps):
+            print(f"Failed to navigate to the delivery location. Skipping to next.")
+            continue
+
+        # 2. Start the centering and payload drop sequence
+        print("Reached delivery location. Starting final approach and payload drop.")
+        drone.center_on_person_and_drop_payload()
 
     # 3. After all deliveries, return to base or land
-    print("\nAll delivery locations processed. Initiating return to base or final landing.")
-    # Example: Land at current position after mission
-    if not drone.land():
-        print("Failed to land the drone after mission.")
-        return
+    print("\nDelivery mission finished. Returning to home.")
+    if not drone.return_to_home():
+        print("Failed to initiate Return to Launch (RTL).")
 
     print("Delivery mission complete.")
 
 if __name__ == "__main__":
     main()
-

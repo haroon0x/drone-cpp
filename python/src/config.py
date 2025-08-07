@@ -33,3 +33,9 @@ VELOCITY_SCALING_FACTOR = 0.01
 
 # GPS navigation settings                               │
 GPS_REACHED_TOLERANCE_M = 2.0 
+
+# Base station communication settings
+BASE_STATION_IP = "127.0.0.1"
+BASE_STATION_PORT = 8080
+MAX_RETRY_ATTEMPTS = 3
+BASE_RETRY_DELAY_S = 0.5 
