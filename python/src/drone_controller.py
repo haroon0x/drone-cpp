@@ -111,6 +111,76 @@ class DroneController:
         print(f"Mode set to {mode}.")
         return True
 
+    def takeoff(self, altitude: float):
+        if not self.is_connected:
+            raise ConnectionError("Not connected to drone.")
+
+        print(f"Attempting to takeoff to {altitude} meters...")
+        self.master.mav.command_long_send(
+            self.master.target_system, self.master.target_component,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, altitude)
+        
+        # Wait for the drone to reach the target altitude
+        start_time = time.time()
+        timeout = 60  # seconds
+        target_reached = False
+
+        while time.time() - start_time < timeout:
+            msg = self.master.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=1)
+            if msg:
+                current_altitude = msg.relative_alt / 1000.0
+                print(f"Current altitude: {current_altitude:.2f}m / Target: {altitude}m")
+                if current_altitude >= altitude * 0.95: # Within 5% of target altitude
+                    print(f"Reached takeoff altitude of {altitude} meters.")
+                    target_reached = True
+                    break
+            time.sleep(0.5) # Check every half second
+
+        if not target_reached:
+            print("Takeoff timed out or failed to reach target altitude.")
+            return False
+        return True
+
+    def goto_location(self, coords: GPSCoordinates, ground_speed: float = 5.0):
+        if not self.is_connected:
+            raise ConnectionError("Not connected to drone.")
+
+        print(f"Going to Lat: {coords.latitude_deg}, Lon: {coords.longitude_deg}, Alt: {coords.absolute_altitude_m}...")
+        
+        # Send the MAVLink command to set the target location
+        self.master.mav.set_position_target_global_int_send(
+            0,  # time_boot_ms (not used)
+            self.master.target_system, self.master.target_component,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, # Frame
+            0b0000111111111000,  # type_mask (only position enabled)
+            int(coords.latitude_deg * 1e7), # lat_int
+            int(coords.longitude_deg * 1e7), # lon_int
+            coords.absolute_altitude_m, # alt
+            0, 0, 0, # vx, vy, vz
+            0, 0, 0, # afx, afy, afz
+            0, 0) # yaw, yaw_rate
+
+        # Monitor drone's position until it reaches the target or times out
+        start_time = time.time()
+        timeout = 120  # seconds (2 minutes for travel)
+        target_tolerance = 0.00001 # Roughly 1 meter in lat/lon degrees
+        
+        while time.time() - start_time < timeout:
+            current_gps = self.get_current_gps()
+            if current_gps:
+                # Calculate Euclidean distance (simplified for small distances)
+                distance = ((current_gps.latitude_deg - coords.latitude_deg)**2 + \
+                            (current_gps.longitude_deg - coords.longitude_deg)**2)**0.5
+                
+                print(f"Distance to target: {distance:.6f} degrees")
+                if distance < target_tolerance:
+                    print("Reached target location.")
+                    return True
+            time.sleep(1) # Check position every second
+
+        print("Goto location timed out or failed to reach target.")
+        return False
+
     def start_person_detection_and_communication(self):
         cap = cv2.VideoCapture(0)
 
@@ -133,11 +203,20 @@ class DroneController:
                 if current_gps:
                     print(f"Person detected at drone's current GPS: Lat: {current_gps.latitude_deg}, Lon: {current_gps.longitude_deg}")
                     self.communicator.transmit_coordinates(current_gps)
-
-            cv2.imshow("Person Detection", annotated_frame)
-
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+                else: 
+                    print("Not able to get the drone's current GPS coordinates")
+            if config.ENABLE_VIDEO_DISPLAY:
+                cv2.imshow("Person Detection", annotated_frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+            else:
+                # In headless mode, provide a way to stop the loop, e.g., a simple time limit or external signal
+                # For now, we'll just break after a short delay to avoid an infinite loop in a non-interactive environment
+                time.sleep(0.1) # Small delay to prevent busy-waiting
+                # In a real production scenario, you'd want a more robust exit condition,
+                # such as listening for a signal or a message from the base station.
+                # For demonstration, we'll assume the script will be managed externally.
+                pass
         
         cap.release()
         cv2.destroyAllWindows()

@@ -53,7 +53,7 @@ def center_and_drop_payload(drone: DroneController):
 def main():
     """
     Main function for the delivery drone.
-    Waits for coordinates, flies to the location, and drops the payload.
+    Waits for coordinates, flies to the location, detect the person, centers the person and then drops the payload.
     """
     print("Delivery drone initiated.")
     drone = DroneController()
@@ -68,7 +68,6 @@ def main():
 
     if not target_coords:
         print("Failed to receive target coordinates.")
-        drone.stop_offboard_mode()
         return
 
     fly_to_target(drone, target_coords)

@@ -10,3 +10,8 @@ DEFAULT_TAKEOFF_ALTITUDE_DELIVER = 10
 
 # Enable or disable video display for person detection
 ENABLE_VIDEO_DISPLAY = False
+
+# Payload release servo settings
+PAYLOAD_SERVO_CHANNEL = 8  # Example: Servo connected to output channel 8
+PAYLOAD_SERVO_OPEN_PWM = 1900 # PWM value for open/release
+PAYLOAD_SERVO_CLOSED_PWM = 1100 # PWM value for closed/hold
