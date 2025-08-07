@@ -5,4 +5,8 @@
 CONNECTION_URL = "udp:127.0.0.1:14540"
 
 # Default takeoff altitude in meters
-DEFAULT_TAKEOFF_ALTITUDE = 10
+DEFAULT_TAKEOFF_ALTITUDE_SCOUT = 60
+DEFAULT_TAKEOFF_ALTITUDE_DELIVER = 10
+
+# Enable or disable video display for person detection
+ENABLE_VIDEO_DISPLAY = False

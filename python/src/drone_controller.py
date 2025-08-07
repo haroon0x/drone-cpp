@@ -2,6 +2,9 @@
 from pymavlink import mavutil
 import time
 from src import config
+from src.communication import BaseStationCommunicator
+from src.detection import scan_for_person
+import cv2
 
 class GPSCoordinates:
     def __init__(self, latitude_deg, longitude_deg, absolute_altitude_m, relative_altitude_m):
@@ -21,6 +24,7 @@ class DroneController:
         self.connection_url = config.CONNECTION_URL
         self.master = None
         self.is_connected = False
+        self.communicator = BaseStationCommunicator()
 
     def connect(self):
         try:
@@ -107,16 +111,36 @@ class DroneController:
         print(f"Mode set to {mode}.")
         return True
 
-    def stop_offboard_mode(self):
-        if not self.is_connected:
-            raise ConnectionError("Not connected to drone.")
+    def start_person_detection_and_communication(self):
+        cap = cv2.VideoCapture(0)
+
+        if not cap.isOpened():
+            print("Error: Could not open video stream for person detection.")
+            return
+
+        print("Starting person detection and communication...")
+        while True:
+            success, frame = cap.read()
+            if not success:
+                print("Failed to grab frame for person detection. Exiting.")
+                break
+
+            person_detected, annotated_frame = scan_for_person(frame)
+            self.communicator.transmit_person_detected_status(person_detected)
+
+            if person_detected:
+                current_gps = self.get_current_gps()
+                if current_gps:
+                    print(f"Person detected at drone's current GPS: Lat: {current_gps.latitude_deg}, Lon: {current_gps.longitude_deg}")
+                    self.communicator.transmit_coordinates(current_gps)
+
+            cv2.imshow("Person Detection", annotated_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
         
-        print("Disarming vehicle...")
-        self.master.mav.command_long_send(
-            self.master.target_system, self.master.target_component,
-            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 0, 0, 0, 0, 0, 0, 0)
-        
-        if not self._wait_for_ack(mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM):
-            print("Could not confirm disarm.")
-        else:
-            print("Vehicle disarmed.")
+        cap.release()
+        cv2.destroyAllWindows()
+
+
+

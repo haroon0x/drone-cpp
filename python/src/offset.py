@@ -27,9 +27,6 @@ class VelocityCommand:
         self.east_m_s = east_m_s
         self.down_m_s = down_m_s
 
-def get_person_detection():
-    # Simulate a person detection
-    return PersonBoundingBox(200, 150, 280, 300, 0.85)
 
 def get_person_center_x(person: PersonBoundingBox):
     return (person.x_min + person.x_max) / 2

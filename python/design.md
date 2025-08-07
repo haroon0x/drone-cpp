@@ -54,10 +54,3 @@ This project is implemented in Python and structured into several core modules:
 
 ---
 
-## 🎯 Success Criteria
-
-1.  **Detection Accuracy:** Person successfully detected and tracked
-2.  **Centering Precision:** Person centered within ±10 pixel threshold
-3.  **GPS Accuracy:** Coordinates captured with <3m accuracy
-4.  **Transmission Reliability:** >95% successful transmission rate
-5.  **Response Time:** Complete cycle (detect → center → transmit) <5 seconds

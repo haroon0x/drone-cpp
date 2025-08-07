@@ -63,6 +63,23 @@ class BaseStationCommunicator:
             print(f"Failed to transmit payload status: {e}")
             return False
 
+    def transmit_person_detected_status(self, detected: bool):
+        message = {
+            "message_type": "person_detection_status",
+            "timestamp": int(time.time() * 1000),
+            "detected": detected
+        }
+        message = json.dumps(message)
+        try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.connect((self.server_ip, self.server_port))
+                sock.sendall(message.encode('utf-8'))
+                print("Successfully transmitted person detection status.")
+                return True
+        except Exception as e:
+            print(f"Failed to transmit person detection status: {e}")
+            return False
+
     def receive_coordinates(self):
         print("Waiting to receive coordinates...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
